@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.preprocessing import image
 from constants import symptoms_dict, diseases_list, verbose_name
-from dotenv import load_dotenv
+from python-dotenv import load_dotenv
 # Disable OneDNN optimizations to reduce memory usage
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 load_dotenv()

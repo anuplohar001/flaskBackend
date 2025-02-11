@@ -6,4 +6,4 @@ scikit-learn==1.2.1
 Pillow==10.0.0
 matplotlib===3.9.2
 flask_cors
-
+python-dotenv
