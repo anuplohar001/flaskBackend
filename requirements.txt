@@ -8,4 +8,4 @@ matplotlib===3.9.2
 flask_cors
 python-dotenv
 gunicorn
-
+gevent
