@@ -79,6 +79,20 @@ def get_predicted_value(patient_symptoms):
     
     return diseases_list[svc.predict(input_df)[0]]
 
+
+@app.route('/')
+def home():
+    return jsonify({
+        "message": "Welcome to the AI-Powered Disease Prediction API!",
+        "routes": {
+            "/predict": "POST - Predict disease based on symptoms",
+            "/predictdisease": "POST - Predict skin disease from image"
+        },
+        "status": "API is running successfully 🚀"
+    })
+
+
+
 @app.route('/predict', methods=['POST'])
 def predict():
     """API endpoint for symptom-based disease prediction."""
