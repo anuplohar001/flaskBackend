@@ -8,10 +8,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.preprocessing import image
 from constants import symptoms_dict, diseases_list, verbose_name
-
+from dotenv import load_dotenv
 # Disable OneDNN optimizations to reduce memory usage
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-
+load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -143,4 +143,7 @@ def get_output():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 5000))  # Default to 5000 if not set
+    debug = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+
+    app.run(debug=debug, port=port)
