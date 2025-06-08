@@ -9,16 +9,17 @@ from flask_cors import CORS
 from tensorflow.keras.preprocessing import image
 from constants import symptoms_dict, diseases_list, verbose_name
 from dotenv import load_dotenv
-# Disable OneDNN optimizations to reduce memory usage
+import numpy as np
+
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Load SVM model once (lightweight)
+
 svc = pickle.load(open('models/svc.pkl', 'rb'))
 
-# Lazy Load TensorFlow Model
+
 model = None
 
 def get_model():
@@ -39,20 +40,21 @@ def load_csv(filename):
     """Load CSV files only when needed to reduce memory usage."""
     return pd.read_csv(f"datasets/{filename}")
 
+
+
 def predict_label(img_path):
     """Predict disease from image using the TensorFlow model."""
-    model = get_model()
-    
+    model = get_model()    
+    if model is None:
+        raise ValueError("🚨 Model is not loaded! Check get_model() function.")
     test_image = image.load_img(img_path, target_size=(28, 28))
     test_image = image.img_to_array(test_image) / 255.0
     test_image = test_image.reshape(1, 28, 28, 3)
-
-    predict_x = model.predict(test_image)
+    predict_x = model.predict(test_image)     
     classes_x = np.argmax(predict_x, axis=1)
-    
-    unload_model()  # Free memory after prediction
-    
     return [verbose_name[classes_x[0]], predict_x, classes_x]
+
+
 
 def helper(dis):
     """Get disease details dynamically without keeping all CSVs in memory."""
@@ -60,14 +62,12 @@ def helper(dis):
     precautions = load_csv("precautions_df.csv")
     medications = load_csv("medications.csv")
     diets = load_csv("diets.csv")
-    workout = load_csv("workout_df.csv")
-    
+    workout = load_csv("workout_df.csv")    
     desc = " ".join(description[description['Disease'] == dis]['Description'].astype(str))
     pre = precautions[precautions['Disease'] == dis][['Precaution_1', 'Precaution_2', 'Precaution_3', 'Precaution_4']].values.tolist()
     med = medications[medications['Disease'] == dis]['Medication'].tolist()
     die = diets[diets['Disease'] == dis]['Diet'].tolist()
-    wrkout = workout[workout['disease'] == dis]['workout'].tolist()
-    
+    wrkout = workout[workout['disease'] == dis]['workout'].tolist()    
     return desc, pre, med, die, wrkout
 
 def get_predicted_value(patient_symptoms):
@@ -79,17 +79,6 @@ def get_predicted_value(patient_symptoms):
     
     return diseases_list[svc.predict(input_df)[0]]
 
-
-@app.route('/')
-def home():
-    return jsonify({
-        "message": "Welcome to the AI-Powered Disease Prediction API!",
-        "routes": {
-            "/predict": "POST - Predict disease based on symptoms",
-            "/predictdisease": "POST - Predict skin disease from image"
-        },
-        "status": "API is running successfully 🚀"
-    })
 
 
 
@@ -119,31 +108,28 @@ def predict():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route("/predictdisease", methods=['POST'])
+@app.route("/predictdisease", methods = ['GET', 'POST'])
 def get_output():
-    """API endpoint for image-based disease prediction."""
-    try:
-        if 'image' not in request.files:
-            return jsonify({"error": "No image uploaded"}), 400
-        
+    if request.method == 'POST':
         img = request.files['image']
-        img_path = f"static/tests/{img.filename}"
+        img_path = "static/tests/" + img.filename    
         img.save(img_path)
-
         predict_result = predict_label(img_path)
+        print(predict_result)        
         index = predict_result[2][0]
         max_value = predict_result[1][0][index]
-
+        print("the value is ", max_value, index)
         if max_value < 0.75 or max_value == 1.0:
-            return jsonify({"disease": False})
+            return jsonify({
+            "disease": False
+        })
 
-        return jsonify({"disease": predict_result[0]})
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            "disease": predict_result[0]
+        })
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 5000))  # Default to 5000 if not set
+    port = int(os.getenv("PORT", 5000))  
     debug = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 
     app.run(debug=debug, port=port)
